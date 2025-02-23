@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ramadan Calendar</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(to bottom, #1e293b, #0f172a);
+            padding: 1rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            opacity: 0.8;
+            max-width: 600px;
+            margin: 0.5rem auto;
+            font-size: 0.9rem;
+        }
+
+        .icons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .icon {
+            width: 1.5rem;
+            height: 1.5rem;
+            color: #facc15;
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1rem;
+            place-items: center;
+            padding: 1rem;
+        }
+
+        .envelope {
+            width: 100%;
+            height: 120px;
+            background: linear-gradient(to right, #059669, #065f46);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .envelope:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .envelope.open {
+            transform: rotate(6deg);
+            opacity: 0.9;
+        }
+
+        .envelope-content {
+            text-align: center;
+            color: white;
+            padding: 1rem;
+        }
+
+        .day-number {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin: 0.5rem 0;
+        }
+
+        .message {
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            display: none;
+            color: #065f46;
+            font-size: 0.875rem;
+            overflow-y: auto;
+        }
+
+        .envelope.open .message {
+            display: block;
+        }
+
+        .envelope.open .envelope-content {
+            display: none;
+        }
+
+        .footer {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            margin-top: 2rem;
+            font-size: 0.8rem;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            max-width: 90%;
+            width: 90%;
+            text-align: center;
+            color: #065f46;
+            font-size: 1rem;
+            position: relative;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #065f46;
+        }
+
+        /* Media Queries for Mobile */
+        @media (max-width: 600px) {
+            .calendar-grid {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 0.5rem;
+            }
+
+            .envelope {
+                height: 100px;
+            }
+
+            .day-number {
+                font-size: 1.2rem;
+            }
+
+            .modal-content {
+                padding: 1rem;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Ramadan Mubarak</h1>
+            <div class="icons">
+                <div class="icon pulse">🌙</div>
+                <div class="icon">⭐</div>
+                <div class="icon pulse">🌙</div>
+            </div>
+            <p>Open a new envelope each day of Ramadan to discover beautiful verses, hadiths, and reminders.</p>
+        </div>
+
+        <div class="calendar-grid" id="calendar"></div>
+
+        <div class="footer">
+            <p>Click on each envelope to reveal a daily blessing</p>
+        </div>
+    </div>
+
+    <!-- Modal Overlay -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal-content">
+            <span class="close-modal" id="close-modal">&times;</span>
+            <p id="modal-text"></p>
+        </div>
+    </div>
+
+    <script>
+        const dailyContent = {
+            1: "O you who believe! Fasting is prescribed for you as it was prescribed for those before you, that you may become righteous. - Al-Baqarah 2:183",
+            2: "Feed a fasting person today and share in their reward. The Prophet ﷺ said: 'Whoever gives food to a fasting person to break his fast will receive the reward of the fasting person without diminishing the reward of the latter.'",
+            3: "The Prophet ﷺ said: 'Whoever fasts during Ramadan out of sincere faith and hoping to attain Allah's rewards, then all his past sins will be forgiven.' - Sahih Al-Bukhari",
+            4: "Remember to make dua during the last third of the night, as this is a blessed time for prayers to be answered.",
+            5: "And when My servants ask you concerning Me, then surely I am very near; I answer the prayer of the suppliant when he calls on Me. - Al-Baqarah 2:186",
+            6: "The Prophet ﷺ said: 'The best charity is that given in Ramadan.' - Tirmidhi",
+            7: "Recite and reflect on the Quran today. The Prophet ﷺ said: 'The best among you are those who learn the Quran and teach it.' - Sahih Al-Bukhari",
+            8: "Give charity today, even if it is small. The Prophet ﷺ said: 'Charity does not decrease wealth.' - Sahih Muslim",
+            9: "Seek Laylatul Qadr (the Night of Decree) in the last ten nights of Ramadan. It is better than a thousand months. - Al-Qadr 97:3",
+            10: "The Prophet ﷺ said: 'Whoever stands in prayer during Laylatul Qadr out of faith and hope in Allah's reward, his previous sins will be forgiven.' - Sahih Al-Bukhari",
+            11: "Perform Taraweeh prayers tonight. The Prophet ﷺ said: 'Whoever prays during the nights of Ramadan with faith and hope in Allah's reward, his previous sins will be forgiven.' - Sahih Al-Bukhari",
+            12: "The Prophet ﷺ said: 'The most beloved deed to Allah is the most consistent, even if it is small.' - Sahih Al-Bukhari",
+            13: "Make dua for your family and friends today. The Prophet ﷺ said: 'The supplication of a Muslim for his brother in his absence is answered.' - Sahih Muslim",
+            14: "The Prophet ﷺ said: 'Whoever does not give up false speech and evil actions, Allah is not in need of his leaving food and drink.' - Sahih Al-Bukhari",
+            15: "Visit the sick or help someone in need today. The Prophet ﷺ said: 'The believer is not the one who eats his fill while his neighbor is hungry.' - Sahih Al-Bukhari",
+            16: "The Prophet ﷺ said: 'The most beloved people to Allah are those who are most beneficial to others.' - Sahih Al-Jami'",
+            17: "Recite Surah Al-Mulk before sleeping tonight. The Prophet ﷺ said: 'It is a protector and a savior; it saves one from the punishment of the grave.' - Tirmidhi",
+            18: "The Prophet ﷺ said: 'Allah is kind and loves kindness in all matters.' - Sahih Al-Bukhari",
+            19: "Forgive those who have wronged you today. The Prophet ﷺ said: 'The strong is not the one who overcomes people by his strength, but the strong is the one who controls himself while in anger.' - Sahih Al-Bukhari",
+            20: "The Prophet ﷺ said: 'The best of you are those with the best character.' - Sahih Al-Bukhari",
+            21: "Make istighfar (seek forgiveness) abundantly today. Allah says: 'Ask forgiveness of your Lord and repent to Him. He will send you abundant rain and increase you in strength.' - Hud 11:52",
+            22: "The Prophet ﷺ said: 'Whoever relieves a believer of a hardship in this world, Allah will relieve him of a hardship on the Day of Judgment.' - Sahih Muslim",
+            23: "The Prophet ﷺ said: 'The most beloved of deeds to Allah are those that are most consistent, even if they are small.' - Sahih Al-Bukhari",
+            24: "The Prophet ﷺ said: 'Whoever believes in Allah and the Last Day, let him speak good or remain silent.' - Sahih Al-Bukhari",
+            25: "The Prophet ﷺ said: 'The best of you are those who are best to their families.' - Tirmidhi",
+            26: "The Prophet ﷺ said: 'Whoever fasts Ramadan and follows it with six days of Shawwal, it is as if he fasted the entire year.' - Sahih Muslim",
+            27: "The Prophet ﷺ said: 'The best of you are those who learn the Quran and teach it.' - Sahih Al-Bukhari",
+            28: "The Prophet ﷺ said: 'Whoever recites one letter of the Quran gets ten rewards. I do not say that Alif-Lam-Mim is one letter, but Alif is a letter, Lam is a letter, and Mim is a letter.' - Tirmidhi",
+            29: "The Prophet ﷺ said: 'The most beloved of deeds to Allah are those that are most consistent, even if they are small.' - Sahih Al-Bukhari",
+            30: "The Prophet ﷺ said: 'Whoever fasts Ramadan out of sincere faith and hoping for Allah's reward, his previous sins will be forgiven.' - Sahih Al-Bukhari",
+        };
+
+        // Load saved state from localStorage
+        const openEnvelopes = JSON.parse(localStorage.getItem('ramadanEnvelopes') || '{}');
+
+        // Modal elements
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalText = document.getElementById('modal-text');
+        const closeModal = document.getElementById('close-modal');
+
+        function createEnvelope(day) {
+            const envelope = document.createElement('div');
+            envelope.className = `envelope ${openEnvelopes[day] ? 'open' : ''}`;
+            
+            const content = document.createElement('div');
+            content.className = 'envelope-content';
+            content.innerHTML = `
+                <div>Day</div>
+                <div class="day-number">${day}</div>
+            `;
+
+            const message = document.createElement('div');
+            message.className = 'message';
+            message.textContent = dailyContent[day] || "More beautiful content coming soon...";
+
+            envelope.appendChild(content);
+            envelope.appendChild(message);
+
+            envelope.addEventListener('click', () => {
+                envelope.classList.toggle('open');
+                openEnvelopes[day] = envelope.classList.contains('open');
+                localStorage.setItem('ramadanEnvelopes', JSON.stringify(openEnvelopes));
+
+                // Show modal with the message
+                modalText.textContent = dailyContent[day];
+                modalOverlay.style.display = 'flex';
+            });
+
+            return envelope;
+        }
+
+        // Close modal
+        closeModal.addEventListener('click', () => {
+            modalOverlay.style.display = 'none';
+        });
+
+        // Close modal when clicking outside
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                modalOverlay.style.display = 'none';
+            }
+        });
+
+        const calendar = document.getElementById('calendar');
+        for (let day = 1; day <= 30; day++) {
+            calendar.appendChild(createEnvelope(day));
+        }
+    </script>
+</body>
+</html>
